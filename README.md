@@ -22,9 +22,23 @@
 
 The little 3.5" screens sold as Turing Smart Screen, TURZX or USB35INCHIPSV2 come with an app that updates about once a second. Ember runs in the tray, starts with Windows and keeps the screen moving: gauges sweep, the network graph runs like a scope trace and the seconds flow, for about 0.3% of the CPU.
 
+## Sobre este fork
+
+Este é um fork do [Ember original do cybvlsky](https://github.com/cybvlsky/Ember), baseado na versão 1.0.2, com três mudanças:
+
+| Versão | O que mudou |
+|---|---|
+| 1.0.2.1 | **HD mecânico não é mais lido a cada 5 s.** O Ember lia os dados SMART (temperatura) de todos os discos a cada 5 segundos; nos HDs isso fazia a cabeça de leitura estalar ("tec-tec") e não deixava o disco descansar. Agora cada disco é verificado uma vez pelo Windows (sem acessar o disco) e os mecânicos ficam de fora. SSD e NVMe continuam iguais; a temperatura do HD deixa de aparecer. |
+| 1.0.2.2 | **Português (Brasil).** Interface, textos dos temas embutidos e instalador, com números e datas no padrão brasileiro. Configurações > Idioma > Português. |
+| 1.0.2.3 | **Temas em retrato (tela em pé).** No editor, em *Retrato (tela em pé)* nas configurações do tema, o canvas vira 320x480. O tema é desenhado em pé e girado na hora de ir para a tela; galeria, editor e prévia mostram em pé. *Girar 180°* escolhe para que lado a tela fica. As telas do Claude e do Spotify continuam deitadas. |
+
+**Instalar esta versão:** em [Actions > Release](https://github.com/Sliperamos/Ember/actions/workflows/release.yml), abra a execução mais recente com ✅ (ou clique em *Run workflow* para gerar uma nova) e baixe o `Ember-Setup` em *Artifacts*. Ele instala por cima do Ember original, mantendo temas e configurações.
+
+O resto deste README é o original, em inglês, com ajustes onde essas mudanças importam.
+
 ## Install
 
-1. Download `Ember-Setup-x.y.z.exe` from [Releases](https://github.com/cybvlsky/Ember/releases/latest).
+1. Download `Ember-Setup-x.y.z.exe` from [Releases](https://github.com/cybvlsky/Ember/releases/latest) (the original), or for this fork from the latest successful run of [Actions > Release](https://github.com/Sliperamos/Ember/actions/workflows/release.yml), under *Artifacts*.
 2. Run it. Ember ships with its own .NET runtime, so there is nothing else to install. It goes into the Start menu and starts with Windows.
 3. Leave *Install the PawnIO driver* ticked if you want CPU temperature (see [Sensors](#sensors)).
 
@@ -126,6 +140,8 @@ Any other sensor LibreHardwareMonitor finds is available too. The Sensors page l
 
 CPU temperature needs administrator rights and the PawnIO driver. Ember starts itself from Task Scheduler with administrator rights, so there is no UAC prompt at logon. [PawnIO](https://github.com/namazso/PawnIO.Setup) is the signed driver LibreHardwareMonitor now uses in place of WinRing0, the old driver that many monitoring tools shipped and that antivirus software flags. The installer, or the button on the Screen page, downloads the official PawnIO setup and checks that it is signed by its author before running it.
 
+Mechanical hard disks are left out of the regular sensor reads: each SMART read moves the heads (an audible click every few seconds) and keeps the drive from idling. Drives are classified once through the Windows storage driver, without touching the disk; SSD and NVMe temperatures update as before.
+
 Ember leaves the riskier parts of LibreHardwareMonitor off: memory SPD over SMBus is never touched and motherboard sensors are opt-in.
 
 ## What it costs
@@ -158,6 +174,8 @@ The editor is the easy way. Themes are JSON files in `%APPDATA%\Ember\themes`, s
 }
 ```
 
+For a screen standing up, add `"portrait": true` (or tick *Portrait* in the editor's theme settings): the theme is laid out at 320x480 and turned a quarter on its way to the panel. *Rotate 180°* on the Screen page picks which way it stands.
+
 Widgets are drawn in order, first at the bottom. Colours are `#RGB`, `#RRGGBB`, `#RRGGBBAA` or a palette name, optionally with an opacity like `a1/30`. With `warn` and `crit` set, the colour shifts smoothly to the palette's `warn` and `crit` colours.
 
 | Type | For | Main fields |
@@ -175,26 +193,28 @@ Ember picks up theme files as soon as they are saved, so you can also keep one o
 
 ## Languages
 
-The interface and the built-in themes come in English and Polish (Settings > Language), including day names and decimal separators on the panel. A new language is one dictionary in [`Strings.cs`](Strings.cs).
+The interface and the built-in themes come in English, Polish and Brazilian Portuguese (Settings > Language), including day names and decimal separators on the panel. A new language is one dictionary in [`Strings.cs`](Strings.cs).
 
 ## Building
 
 You need the [.NET 9 SDK](https://dotnet.microsoft.com/download).
 
 ```
-git clone https://github.com/cybvlsky/Ember
+git clone https://github.com/Sliperamos/Ember
 cd Ember
 dotnet run -c Release
 ```
 
 A few switches help while working on it:
 
-- `Ember.exe --selftest` checks the protocol encoding, colour conversion, the diff sender against a virtual panel, the translations and every theme in both languages.
+- `Ember.exe --selftest` checks the protocol encoding, colour conversion, the diff sender against a virtual panel, the translations, portrait rendering and every theme in every language.
 - `Ember.exe --render <folder>` writes a PNG of every theme and app screen, its bandwidth heat map, a bandwidth report and the frames of the comparison above.
 - `Ember.exe --demo` runs on made-up sensor readings.
 - `python tools/make-docs.py <Ember.exe>` rebuilds the images in this README.
 
 ## Releases
+
+In this fork, run the workflow by hand (Actions > Release > Run workflow) and download the installer from the run's *Artifacts*; bump `<Version>` in `Ember.csproj` and add a CHANGELOG section first.
 
 GitHub Actions builds every release from a tag. Add a `## x.y.z` section to [CHANGELOG.md](CHANGELOG.md), commit, then `git tag vx.y.z` and `git push --tags`. The workflow runs the self-test, builds a self-contained installer with Inno Setup and publishes the release with that changelog section as its notes.
 
@@ -212,6 +232,8 @@ I'm not hiding the AI involvement. Ember is open source because the stock softwa
 - [PawnIO](https://github.com/namazso/PawnIO.Setup) by namazso gives it safe access to the CPU.
 - [SkiaSharp](https://github.com/mono/SkiaSharp) (MIT) draws everything.
 - [turing-smart-screen-python](https://github.com/mathoudebine/turing-smart-screen-python) by mathoudebine documented the panel's protocol.
+
+Ember was created by [cybvlsky](https://github.com/cybvlsky/Ember). This fork's changes (hard disk polling, Brazilian Portuguese, portrait themes) were written with Claude.
 
 Ember is not affiliated with Turing or TURZX.
 
