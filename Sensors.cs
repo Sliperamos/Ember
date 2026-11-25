@@ -251,6 +251,8 @@ public sealed class Sensors : IDisposable
             // Disks and GPUs the themes are not showing (the iGPU costs ~5 ms of CPU per update) refresh every 5 s.
             bool idle = hw.HardwareType == HardwareType.Storage || IsGpu(hw) && gpuInUse != null && hw != gpuInUse;
             bool slow = idle && seq % 5 != 0;
+            // Spinning hard disks are never polled: every SMART read moves the heads (an audible click) and keeps the drive from idling.
+            if (hw.HardwareType == HardwareType.Storage && IsSpinning(hw)) slow = true;
             if (!slow)
             {
                 try { hw.Update(); foreach (var sub in hw.SubHardware) sub.Update(); }
@@ -315,6 +317,45 @@ public sealed class Sensors : IDisposable
     }
 
     IHardware? gpuInUse;
+
+    readonly Dictionary<string, bool> spinning = new();
+
+    /// Whether a storage device is a mechanical hard disk. Asked once per drive and cached; the query goes to the
+    /// Windows storage driver, not to the disk, so it does not wake or click the drive.
+    bool IsSpinning(IHardware hw)
+    {
+        string id = hw.Identifier.ToString();
+        if (spinning.TryGetValue(id, out var v)) return v;
+        string type = hw.GetType().Name;
+        if (id.StartsWith("/nvme", StringComparison.OrdinalIgnoreCase) || type.StartsWith("Ssd", StringComparison.Ordinal) || type.StartsWith("NVMe", StringComparison.Ordinal))
+            v = false;
+        else if (int.TryParse(id[(id.LastIndexOf('/') + 1)..], out int n) && SeekPenalty(n) is bool seek)
+            v = seek;
+        else
+            v = type.Contains("HardDisk", StringComparison.Ordinal);
+        spinning[id] = v;
+        Log.Info($"disk {hw.Name} ({id}, {type}): {(v ? "hard disk, not polled" : "solid state, polled")}");
+        return v;
+    }
+
+    static bool? SeekPenalty(int drive)
+    {
+        using var h = CreateFileW(@"\\.\PhysicalDrive" + drive, 0, 3, IntPtr.Zero, 3, 0, IntPtr.Zero);
+        if (h.IsInvalid) return null;
+        var q = new STORAGE_PROPERTY_QUERY { PropertyId = 7 /* StorageDeviceSeekPenaltyProperty */ };
+        if (!DeviceIoControl(h, 0x2D1400 /* IOCTL_STORAGE_QUERY_PROPERTY */, ref q, Marshal.SizeOf<STORAGE_PROPERTY_QUERY>(),
+                out DEVICE_SEEK_PENALTY_DESCRIPTOR r, Marshal.SizeOf<DEVICE_SEEK_PENALTY_DESCRIPTOR>(), out _, IntPtr.Zero)) return null;
+        return r.IncursSeekPenalty != 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)] struct STORAGE_PROPERTY_QUERY { public int PropertyId, QueryType; public byte AdditionalParameters; }
+    [StructLayout(LayoutKind.Sequential)] struct DEVICE_SEEK_PENALTY_DESCRIPTOR { public uint Version, Size; public byte IncursSeekPenalty; }
+
+    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFileW(string name, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+    [DllImport("kernel32", SetLastError = true)]
+    static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle h, uint code, ref STORAGE_PROPERTY_QUERY input, int inSize,
+        out DEVICE_SEEK_PENALTY_DESCRIPTOR output, int outSize, out int returned, IntPtr overlapped);
 
     internal static FieldInfo? PcieHook => typeof(Computer).Assembly.GetType("LibreHardwareMonitor.Interop.NvidiaML")
         ?.GetField("_windowsNvmlDeviceGetPcieThroughputDelegate", BindingFlags.Static | BindingFlags.NonPublic);
