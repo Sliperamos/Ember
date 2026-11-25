@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2.2 - 2026-11-25
+
+- Brazilian Portuguese: the interface, the built-in themes and the installer.
+
 ## 1.0.2.1 - 2026-11-25
 
 - Mechanical hard disks are no longer polled for SMART data every 5 seconds, which made them click and kept them from idling. SSD and NVMe temperatures still update as before.

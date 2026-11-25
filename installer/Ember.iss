@@ -45,14 +45,18 @@ ShowLanguageDialog=auto
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "pl"; MessagesFile: "compiler:Languages\Polish.isl"
+Name: "pt"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 
 [CustomMessages]
 en.PawnIo=Install the PawnIO driver (needed for CPU temperature)
 pl.PawnIo=Zainstaluj sterownik PawnIO (potrzebny do temperatury procesora)
+pt.PawnIo=Instalar o driver PawnIO (necessário para a temperatura da CPU)
 en.PawnIoStatus=Installing PawnIO...
 pl.PawnIoStatus=Instaluję PawnIO...
+pt.PawnIoStatus=Instalando o PawnIO...
 en.Launch=Start Ember
 pl.Launch=Uruchom Ember
+pt.Launch=Iniciar o Ember
 
 [Tasks]
 Name: pawnio; Description: "{cm:PawnIo}"; Check: not PawnIoInstalled

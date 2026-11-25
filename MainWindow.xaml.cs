@@ -859,7 +859,7 @@ public partial class MainWindow : Window
         if (!elevated) Row(T("Administrator rights"), null, Btn(T("Restart as administrator"), null, false, RestartElevated));
 
         Section(T("Language"));
-        Row(T("Interface and built-in themes"), null, Chips(new[] { ("en", "English"), ("pl", "Polski") }, L.Lang, v =>
+        Row(T("Interface and built-in themes"), null, Chips(new[] { ("en", "English"), ("pl", "Polski"), ("pt", "Português") }, L.Lang, v =>
         {
             cfg.Language = v;
             cfg.Save();

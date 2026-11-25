@@ -328,6 +328,7 @@ public static class App
         if (ai >= 0)
         {
             if (args.Contains("pl")) L.Lang = "pl";
+            if (args.Contains("pt")) L.Lang = "pt";
             return SelfTest.Render(args.ElementAtOrDefault(ai + 1) ?? ".");
         }
         if (args.Contains("--selftest")) return SelfTest.Run();

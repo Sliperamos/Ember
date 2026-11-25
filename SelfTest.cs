@@ -107,6 +107,8 @@ public static class SelfTest
         static string Holes(string t) => string.Join(" ", System.Text.RegularExpressions.Regex.Matches(t, @"\{[^}]*\}").Select(m => m.Value).Order());
         var broken = L.Polish.Where(kv => Holes(kv.Key) != Holes(kv.Value)).Select(kv => kv.Key).ToList();
         Check(broken.Count == 0, $"Polish strings keep their placeholders ({string.Join(" | ", broken)})");
+        var brokenPt = L.Portuguese.Where(kv => Holes(kv.Key) != Holes(kv.Value)).Select(kv => kv.Key).ToList();
+        Check(brokenPt.Count == 0, $"Portuguese strings keep their placeholders ({string.Join(" | ", brokenPt)})");
         Check(Themes.NewId("Mój Motyw ąę", []) == "moj-motyw-ae", $"theme id ({Themes.NewId("Mój Motyw ąę", [])})");
         Check(Renderer.ParseHex("#FF8000") == new SKColor(255, 128, 0) && Renderer.ParseHex("#FF800080") == new SKColor(255, 128, 0, 128), "hex colours");
 
