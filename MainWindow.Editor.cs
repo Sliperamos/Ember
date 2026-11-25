@@ -20,8 +20,11 @@ public partial class MainWindow
     Theme? draft;
     Renderer? editR;
     bool editRDirty = true, editFirst = true, layersQuiet, fieldsQuiet, live;
-    readonly SKBitmap editFrame = new(W, H, SKColorType.Bgra8888, SKAlphaType.Premul);
-    readonly WriteableBitmap editBmp = new(W, H, 96, 96, PixelFormats.Pbgra32, null);
+    SKBitmap editFrame = new(W, H, SKColorType.Bgra8888, SKAlphaType.Premul);
+    WriteableBitmap editBmp = new(W, H, 96, 96, PixelFormats.Pbgra32, null);
+    /// Canvas size of the theme being edited: 480x320, or 320x480 for a portrait theme.
+    int EW => draft?.Width ?? W;
+    int EH => draft?.Height ?? H;
     int sel = -1, hover = -1;
     readonly List<string> undo = new();
     int undoAt = -1;
@@ -335,10 +338,27 @@ public partial class MainWindow
             editRDirty = false;
             editFirst = true;
         }
+        EnsureEditSize();
         using (var c = new SKCanvas(editFrame)) editR.Render(c, SnapForPreview(), editFirst ? 0 : 0.033, Clock.Now);
         editFirst = false;
-        editBmp.WritePixels(new Int32Rect(0, 0, W, H), editFrame.GetPixels(), editFrame.ByteCount, editFrame.RowBytes);
+        editBmp.WritePixels(new Int32Rect(0, 0, editFrame.Width, editFrame.Height), editFrame.GetPixels(), editFrame.ByteCount, editFrame.RowBytes);
         UpdateOverlay();
+    }
+
+    /// Resizes the canvas when the edited theme turns between landscape and portrait. The Viewbox around it rescales.
+    void EnsureEditSize()
+    {
+        int w = EW, h = EH;
+        if (editFrame.Width == w && editFrame.Height == h) return;
+        editFrame.Dispose();
+        editFrame = new SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Premul);
+        editBmp = new WriteableBitmap(w, h, 96, 96, PixelFormats.Pbgra32, null);
+        EditImage.Source = editBmp;
+        CanvasHost.Width = EditImage.Width = Overlay.Width = w;
+        CanvasHost.Height = EditImage.Height = Overlay.Height = h;
+        guideV.Y2 = h + 20;
+        guideH.X2 = w + 20;
+        editFirst = true;
     }
 
     void UpdateOverlay()
@@ -408,7 +428,7 @@ public partial class MainWindow
             var b = editR.Bounds(i);
             if (!b.Contains((float)p.X, (float)p.Y)) continue;
             // Glows and full-screen backgrounds only win when nothing else is under the cursor.
-            if (w.Type == "glow" || b.Width >= W - 1 && b.Height >= H - 1) { if (background < 0) background = i; continue; }
+            if (w.Type == "glow" || b.Width >= EW - 1 && b.Height >= EH - 1) { if (background < 0) background = i; continue; }
             return i;
         }
         return background;
@@ -442,7 +462,7 @@ public partial class MainWindow
     {
         if (draft == null || editR == null) return;
         var p = e.GetPosition(CanvasHost);
-        CursorPos.Text = $"{Math.Clamp((int)p.X, 0, W - 1)}, {Math.Clamp((int)p.Y, 0, H - 1)}";
+        CursorPos.Text = $"{Math.Clamp((int)p.X, 0, EW - 1)}, {Math.Clamp((int)p.Y, 0, EH - 1)}";
         if (dragMode == 0)
         {
             hover = HitTest(p);
@@ -510,12 +530,12 @@ public partial class MainWindow
 
     List<double> SnapTargets(bool vertical)
     {
-        var list = vertical ? new List<double> { 0, H / 2.0, H } : new List<double> { 0, W / 2.0, W };
+        var list = vertical ? new List<double> { 0, EH / 2.0, EH } : new List<double> { 0, EW / 2.0, EW };
         for (int i = 0; i < draft!.Widgets.Count; i++)
         {
             if (i == sel || draft.Widgets[i].Type == "glow") continue;
             var b = editR!.Bounds(i);
-            if (b.Width >= W - 1 && b.Height >= H - 1) continue;
+            if (b.Width >= EW - 1 && b.Height >= EH - 1) continue;
             if (vertical) list.AddRange([b.Top, b.MidY, b.Bottom]); else list.AddRange([b.Left, b.MidX, b.Right]);
         }
         return list;
@@ -1160,6 +1180,11 @@ public partial class MainWindow
         cb.Margin = new Thickness(0, 0, 0, 8);
         Props.Children.Add(cb);
         ColorButton(T("Background"), () => t.Bg, v => t.Bg = v ?? "#000000", false);
+        var portrait = new CheckBox { Style = (Style)FindResource("Flag"), Content = T("Portrait (screen standing up)"), IsChecked = t.Portrait, Margin = new Thickness(0, 4, 0, 8),
+            ToolTip = T("The canvas becomes 320x480. If it comes out upside down on the screen, turn on Rotate 180° in Screen.") };
+        portrait.Checked += (_, _) => { t.Portrait = true; Changed(); };
+        portrait.Unchecked += (_, _) => { t.Portrait = false; Changed(); };
+        Props.Children.Add(portrait);
 
         Props.Children.Add(Caption(T("Accent presets")));
         var wp = new WrapPanel();

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2.3 - 2026-11-25
+
+- Portrait themes for a screen standing up: tick Portrait in the editor's theme settings and the canvas becomes 320x480. The gallery, editor and Screen preview show it upright; Rotate 180° picks which way it stands.
+
 ## 1.0.2.2 - 2026-11-25
 
 - Brazilian Portuguese: the interface, the built-in themes and the installer.

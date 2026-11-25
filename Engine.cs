@@ -182,7 +182,7 @@ public sealed class FrameDiff
         {
             double now = 100 + i / 30.0;
             if (i % 30 == 0) snap = Snapshot.Demo(Math.Floor(now));
-            r.Render(c, snap!, 1 / 30.0, now);
+            r.RenderPanel(c, snap!, 1 / 30.0, now);
             To565(frame, next);
             diff.Send(next, now, double.MaxValue, count, out _);
             if (i == warm - 1) bytes = 0;
@@ -286,6 +286,8 @@ public sealed class Engine : IDisposable
     public volatile string Port = "";
     public volatile float Fps, KBps;
     public volatile float RenderMs;
+    /// What the preview holds is a portrait theme turned onto the panel, so the window turns it back.
+    public volatile bool PortraitShown;
 
     public Engine(Settings cfg, Sensors sensors, Theme theme)
     {
@@ -390,8 +392,9 @@ public sealed class Engine : IDisposable
                 using (var c = new SKCanvas(frame))
                 {
                     if (intro) c.DrawBitmap(introFrame ??= Icons.Intro(), 0, 0);
-                    else renderer!.Render(c, snap, fresh ? 0 : dt, t0);
+                    else renderer!.RenderPanel(c, snap, fresh ? 0 : dt, t0);
                 }
+                PortraitShown = !intro && renderer!.Theme.Portrait;
                 RenderMs = (float)((Clock.Now - r0) * 1000);
                 if (ShowTraffic) for (int i = 0; i < heat.Length; i++) heat[i] *= (float)Math.Exp(-dt / 0.35);
                 if (PreviewWanted)

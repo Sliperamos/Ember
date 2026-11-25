@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     readonly DispatcherTimer timer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(33) };
     readonly WriteableBitmap screenBmp = new(W, H, 96, 96, PixelFormats.Pbgra32, null);
     readonly byte[] screenBuf = new byte[W * H * 4];
+    bool screenPortrait;
     int previewSeen = -1, tick;
     string page = "screen";
     readonly Grid toastHost = new() { IsHitTestVisible = false, VerticalAlignment = VerticalAlignment.Bottom, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 34) };
@@ -185,6 +186,13 @@ public partial class MainWindow : Window
             case "screen":
                 if (App.Engine.CopyPreview(screenBuf, ref previewSeen))
                     screenBmp.WritePixels(new Int32Rect(0, 0, W, H), screenBuf, W * 4, 0);
+                if (App.Engine.PortraitShown != screenPortrait)
+                {
+                    screenPortrait = App.Engine.PortraitShown;
+                    ScreenImage.LayoutTransform = screenPortrait ? new RotateTransform(-90) : Transform.Identity;
+                    Device.Width = screenPortrait ? H + 16 : W + 16;
+                    Device.Height = screenPortrait ? W + 16 : H + 16;
+                }
                 break;
             case "themes":
                 if (tick % 4 == 0) TickGallery();
@@ -544,11 +552,11 @@ public partial class MainWindow : Window
         var snap = SnapForPreview();
         foreach (var t in App.AllThemes)
         {
-            var frame = new SKBitmap(W, H, SKColorType.Bgra8888, SKAlphaType.Premul);
+            var frame = new SKBitmap(t.Width, t.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
             var r = new Renderer(t);
             using (var c = new SKCanvas(frame)) r.Render(c, snap, 0, Clock.Now);
-            var bmp = new WriteableBitmap(W, H, 96, 96, PixelFormats.Pbgra32, null);
-            bmp.WritePixels(new Int32Rect(0, 0, W, H), frame.GetPixels(), frame.ByteCount, frame.RowBytes);
+            var bmp = new WriteableBitmap(t.Width, t.Height, 96, 96, PixelFormats.Pbgra32, null);
+            bmp.WritePixels(new Int32Rect(0, 0, t.Width, t.Height), frame.GetPixels(), frame.ByteCount, frame.RowBytes);
             Gallery.Children.Add(ThemeCard(t, r, frame, bmp));
         }
         MarkActive();
@@ -568,7 +576,7 @@ public partial class MainWindow : Window
             if (th.Last != null && px.SequenceEqual(th.Last)) continue;
             th.Last ??= new byte[px.Length];
             px.CopyTo(th.Last);
-            th.Bmp.WritePixels(new Int32Rect(0, 0, W, H), th.Frame.GetPixels(), th.Frame.ByteCount, th.Frame.RowBytes);
+            th.Bmp.WritePixels(new Int32Rect(0, 0, th.Frame.Width, th.Frame.Height), th.Frame.GetPixels(), th.Frame.ByteCount, th.Frame.RowBytes);
         }
     }
 
@@ -580,7 +588,7 @@ public partial class MainWindow : Window
 
     FrameworkElement ThemeCard(Theme t, Renderer r, SKBitmap frame, WriteableBitmap bmp)
     {
-        var img = new Image { Source = bmp, Width = 270, Height = 180, Stretch = Stretch.Fill };
+        var img = new Image { Source = bmp, Width = 270, Height = 180, Stretch = t.Portrait ? Stretch.Uniform : Stretch.Fill };
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         var shot = new Border { CornerRadius = new CornerRadius(4), Child = img, Background = Brushes.Black, Cursor = Cursors.Hand, ToolTip = T("Show on the screen") };
         shot.Clip = new RectangleGeometry(new Rect(0, 0, 270, 180), 4, 4);

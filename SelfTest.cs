@@ -114,6 +114,17 @@ public static class SelfTest
 
         var themes = Themes.LoadAll();
         Check(themes.Count(t => t.BuiltIn) >= 6, $"built-in themes load ({themes.Count(t => t.BuiltIn)})");
+        var tall = themes.First().Clone();
+        tall.Portrait = true;
+        Check(Theme.Parse(tall.ToJson()).Portrait && !Theme.Parse(themes.First().ToJson()).Portrait, "portrait flag round-trips");
+        using (var still = Renderer.Still(tall, Snapshot.Demo(100))) Check(still.Width == 320 && still.Height == 480, "portrait theme renders upright");
+        using (var panel = new SKBitmap(FrameDiff.W, FrameDiff.H, SKColorType.Bgra8888, SKAlphaType.Premul))
+        using (var pr = new Renderer(tall))
+        using (var pc = new SKCanvas(panel))
+        {
+            pr.RenderPanel(pc, Snapshot.Demo(100), 0, 100);
+            Check(panel.Width == 480 && panel.Height == 320, "portrait theme turns onto the panel");
+        }
         int before = Renderer.Errors;
         foreach (var t in themes)
         {

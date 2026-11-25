@@ -21,7 +21,11 @@ public sealed class Theme
     public string Bg { get; set; } = "#0A0D12";
     public Dictionary<string, string> Palette { get; set; } = new();
     public List<Widget> Widgets { get; set; } = new();
+    /// Standing screen: laid out and drawn at 320x480, turned a quarter on its way to the 480x320 panel.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Portrait { get; set; }
 
+    [JsonIgnore] public int Width => Portrait ? TuringLcd.Height : TuringLcd.Width;
+    [JsonIgnore] public int Height => Portrait ? TuringLcd.Width : TuringLcd.Height;
     [JsonIgnore] public string Id { get; set; } = "";
     [JsonIgnore] public bool BuiltIn { get; set; }
 
@@ -193,7 +197,7 @@ public sealed class Renderer : IDisposable
     readonly State[] st;
     readonly int firstDynamic;
     readonly SKColor bg;
-    SKBitmap? staticLayer;
+    SKBitmap? staticLayer, upright;
     double now;
     DateTime clock;
     public bool Animating { get; private set; }
@@ -235,6 +239,7 @@ public sealed class Renderer : IDisposable
     public void Dispose()
     {
         staticLayer?.Dispose();
+        upright?.Dispose();
         foreach (var s in st) { s.Blob?.Dispose(); s.Img?.Dispose(); }
     }
 
@@ -245,13 +250,27 @@ public sealed class Renderer : IDisposable
         clock = DateTime.Now;
         if (staticLayer == null)
         {
-            staticLayer = new SKBitmap(W, H, SKColorType.Bgra8888, SKAlphaType.Premul);
+            staticLayer = new SKBitmap(th.Width, th.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
             using var sc = new SKCanvas(staticLayer);
             sc.Clear(bg);
             for (int i = 0; i < firstDynamic; i++) Draw(sc, i, Snapshot.Empty, 0);
         }
         c.DrawBitmap(staticLayer, 0, 0);
         for (int i = firstDynamic; i < ws.Length; i++) Draw(c, i, s, dt);
+    }
+
+    /// Draws onto the 480x320 panel frame. A portrait theme is drawn upright first, then turned a quarter clockwise
+    /// (its top lands on the panel's right edge); Rotate 180° covers a screen standing the other way.
+    public void RenderPanel(SKCanvas c, Snapshot s, double dt, double now)
+    {
+        if (!th.Portrait) { Render(c, s, dt, now); return; }
+        upright ??= new SKBitmap(th.Width, th.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using (var uc = new SKCanvas(upright)) Render(uc, s, dt, now);
+        c.Save();
+        c.Translate(TuringLcd.Width, 0);
+        c.RotateDegrees(90);
+        c.DrawBitmap(upright, 0, 0);
+        c.Restore();
     }
 
     /// Screen-space box of widget i as last drawn (text measures itself), for the editor.
@@ -959,7 +978,7 @@ public sealed class Renderer : IDisposable
     /// Renders a theme into a fresh bitmap, for gallery thumbnails and exports.
     public static SKBitmap Still(Theme t, Snapshot s, int warmupFrames = 40)
     {
-        var bmp = new SKBitmap(W, H, SKColorType.Bgra8888, SKAlphaType.Premul);
+        var bmp = new SKBitmap(t.Width, t.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var r = new Renderer(t);
         using var c = new SKCanvas(bmp);
         for (int i = 0; i < warmupFrames; i++) r.Render(c, s, i == 0 ? 0 : 0.1, s.T + 0.6);

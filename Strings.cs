@@ -461,6 +461,8 @@ public static class L
 
     internal static readonly Dictionary<string, string> Portuguese = new()
     {
+        ["Portrait (screen standing up)"] = "Retrato (tela em pé)",
+        ["The canvas becomes 320x480. If it comes out upside down on the screen, turn on Rotate 180° in Screen."] = "A área fica 320x480. Se aparecer de cabeça para baixo na tela, ligue Girar 180° em Tela.",
         ["Screen"] = "Tela",
         ["Screen colors"] = "Cores da tela",
         ["Apps"] = "Apps",
