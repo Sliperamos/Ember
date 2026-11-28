@@ -640,7 +640,7 @@ public static class L
         ["Refresh"] = "Atualização",
         ["{0} s"] = "{0} s",
         ["Automatic (dedicated card)"] = "Automático (placa dedicada)",
-        ["Automatic (busiest)"] = "Automático (a mais ocupada)",
+        ["Automatic (busiest)"] = "Automático (o mais ocupado)",
         ["Network adapter"] = "Adaptador de rede",
         ["Motherboard sensors"] = "Sensores da placa-mãe",
         ["Fans and temperatures from the Super I/O chip. Experimental, leave off unless you need them."] = "Ventoinhas e temperaturas do chip Super I/O. Experimental, deixe desligado se não precisar.",
